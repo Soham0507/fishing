@@ -1,0 +1,551 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Clutch Catch (Copy)</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Alfa+Slab+One&family=Barlow+Condensed:wght@500;600;700&family=Barlow:wght@400;500;600&display=swap">
+<style>
+/* Layout: one full-bleed clip under a fixed HUD &mdash; trip board top-left, line-in bar top-center, tension meter pinned to the right edge, prompts bottom-center. */
+:root{
+  --sea:#061a2e;            /* deep water */
+  --sea-2:#0b2a44;
+  --foam:#f1f6f8;           /* spray */
+  --foam-dim:rgba(241,246,248,.66);
+  --sun:#f5c542;            /* hookset gold */
+  --kelp:#3cc47c;           /* safe tension */
+  --coral:#ff5a5a;          /* snap */
+  --amber:#f7a53b;
+  --glass:rgba(4,18,32,.66);
+  --line:rgba(241,246,248,.18);
+  --f-display:'Alfa Slab One','Rockwell','Georgia',serif;
+  --f-score:'Barlow Condensed','Arial Narrow','Helvetica Neue',sans-serif;
+  --f-ui:'Barlow','Helvetica Neue',Arial,sans-serif;
+  --gutter-l:max(16px,env(safe-area-inset-left,0px));
+  --gutter-r:max(16px,env(safe-area-inset-right,0px));
+  color-scheme:dark;
+}
+html,body{height:100%}
+[hidden]{display:none!important}
+body{margin:0;background:var(--sea);color:var(--foam);font-family:var(--f-ui);overflow:hidden;
+  -webkit-user-select:none;user-select:none;touch-action:none;-webkit-tap-highlight-color:transparent;-webkit-touch-callout:none}
+button{font:inherit;color:inherit;cursor:pointer;touch-action:manipulation}
+button:focus-visible{outline:3px solid var(--sun);outline-offset:3px}
+
+#stage{position:fixed;inset:0;background:var(--sea) url("img/sea.jpg") center/cover no-repeat}
+#clip{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0;transition:opacity .15s linear}
+#clip.on{opacity:1}
+#fx{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+#dip{position:absolute;inset:0;background:#000;opacity:0;pointer-events:none;transition:opacity .16s linear}
+#dip.on{opacity:1}
+#splashFlash{position:absolute;inset:0;background:#fff;opacity:0;pointer-events:none}
+#splashFlash.on{animation:flash .5s ease-out}
+#goldFlash{position:absolute;inset:0;background:var(--sun);opacity:0;pointer-events:none;mix-blend-mode:screen}
+#goldFlash.on{animation:flash .6s ease-out}
+@keyframes flash{0%{opacity:.7}100%{opacity:0}}
+#vignette{position:absolute;inset:0;pointer-events:none;background:radial-gradient(ellipse at 50% 55%,transparent 55%,rgba(0,0,0,.5) 100%)}
+#danger{position:absolute;inset:0;pointer-events:none;opacity:0;transition:opacity .2s;background:radial-gradient(ellipse at 50% 50%,transparent 45%,rgba(255,60,60,.55) 100%)}
+#danger.on{opacity:1;animation:throb .5s ease-in-out infinite alternate}
+@keyframes throb{from{opacity:.55}to{opacity:1}}
+#failDim{position:absolute;inset:0;background:rgba(6,26,46,0);pointer-events:none;transition:background .3s}
+#failDim.on{background:rgba(6,26,46,.5)}
+
+/* HUD */
+#hud{position:absolute;inset:0;pointer-events:none}
+.board{position:absolute;top:calc(12px + env(safe-area-inset-top,0px));left:var(--gutter-l);display:flex;gap:6px;
+  font-family:var(--f-score);font-variant-numeric:tabular-nums;text-transform:uppercase;letter-spacing:.04em}
+.cell{position:relative;background:linear-gradient(180deg,rgba(255,255,255,.08),rgba(255,255,255,0) 40%),var(--glass);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);border:1px solid var(--line);box-shadow:inset 0 1px 0 rgba(255,255,255,.12),0 3px 10px rgba(0,0,0,.35);padding:6px 10px 5px;line-height:1;min-width:52px;text-align:center;border-radius:6px}
+.cell small{display:block;font-size:10px;letter-spacing:.14em;color:var(--foam-dim);margin-bottom:3px;font-weight:600}
+.cell b{display:block;font-size:22px;font-weight:700;text-shadow:0 1px 0 rgba(0,0,0,.4)}
+.cell.gold b{color:var(--sun);text-shadow:0 0 12px rgba(245,197,66,.5),0 1px 0 rgba(0,0,0,.4)}
+
+/* line-in progress */
+#linebar{position:absolute;left:50%;top:calc(12px + env(safe-area-inset-top,0px));transform:translateX(-50%);width:min(44vw,380px);opacity:0;transition:opacity .2s}
+#linebar.on{opacity:1}
+#linebar .lab{display:flex;justify-content:space-between;font-family:var(--f-score);font-size:11px;font-weight:700;letter-spacing:.18em;color:var(--foam-dim);margin-bottom:4px;text-transform:uppercase}
+#linebar .lab b{color:var(--foam);font-variant-numeric:tabular-nums}
+#linebar .track{position:relative;height:14px;border-radius:7px;background:linear-gradient(180deg,rgba(0,0,0,.2),rgba(0,0,0,0) 50%),var(--glass);border:1px solid var(--line);box-shadow:inset 0 1px 3px rgba(0,0,0,.5);overflow:visible}
+#linebar .prog{position:absolute;left:0;top:0;bottom:0;width:20%;border-radius:7px;background:linear-gradient(to right,#2a8fd1,#5fd0ff)}
+#linebar .fish{position:absolute;top:50%;left:20%;width:34px;height:20px;transform:translate(-50%,-50%);filter:drop-shadow(0 2px 2px rgba(0,0,0,.6))}
+#linebar .boat{position:absolute;left:-14px;top:50%;width:26px;height:16px;transform:translateY(-55%)}
+@media (max-width:640px){#linebar{top:calc(66px + env(safe-area-inset-top,0px));width:min(70vw,380px)}}
+
+/* tension meter, pinned right */
+#meter{position:absolute;right:calc(var(--gutter-r) + 2px);top:50%;transform:translateY(-50%);height:min(56vh,400px);display:flex;flex-direction:column;align-items:center;gap:8px;opacity:0;transition:opacity .2s}
+#meter.on{opacity:1}
+.m-cap{font-family:var(--f-score);font-size:11px;font-weight:700;letter-spacing:.18em;color:var(--foam-dim)}
+.m-cap.red{color:var(--coral)}
+.m-track{position:relative;flex:1;width:38px;border-radius:19px;background:linear-gradient(180deg,rgba(0,0,0,.25),rgba(0,0,0,0) 30%),var(--glass);border:1px solid var(--line);overflow:hidden;box-shadow:inset 0 0 10px rgba(0,0,0,.5),0 0 0 3px rgba(4,18,32,.35);transition:box-shadow .15s}
+.m-track::after{content:"";position:absolute;top:0;left:3px;width:8px;height:100%;border-radius:4px;background:linear-gradient(180deg,rgba(255,255,255,.18),rgba(255,255,255,.03) 40%,rgba(255,255,255,0));pointer-events:none;z-index:3}
+#meter.danger .m-track{box-shadow:inset 0 0 10px rgba(0,0,0,.5),0 0 0 3px rgba(255,90,90,.75),0 0 22px rgba(255,90,90,.6)}
+.m-zone{position:absolute;z-index:2;left:0;right:0;pointer-events:none}
+.m-zone.green{background:rgba(60,196,124,.3);border-top:1px solid var(--kelp);border-bottom:1px solid var(--kelp)}
+.m-zone.red{background:rgba(255,90,90,.3);border-bottom:1px solid var(--coral)}
+.m-fill{position:absolute;z-index:1;left:0;right:0;bottom:0;height:0%;background:linear-gradient(to top,#5fd0ff 0%,var(--kelp) 30%,var(--kelp) 70%,var(--amber) 85%,var(--coral) 100%);background-size:100% var(--track-h,300px);background-position:bottom;background-repeat:no-repeat}
+.m-tag{position:absolute;right:46px;font-family:var(--f-score);font-size:12px;font-weight:700;letter-spacing:.16em;color:var(--kelp);white-space:nowrap;transform:translateY(-50%);text-shadow:0 1px 0 rgba(0,0,0,.8)}
+
+#prompt{position:absolute;left:50%;bottom:calc(14% + env(safe-area-inset-bottom,0px));transform:translateX(-50%);width:max-content;max-width:90vw;text-align:center;
+  font-family:var(--f-display);font-size:clamp(24px,5.6vw,42px);letter-spacing:.04em;color:var(--foam);
+  background:linear-gradient(180deg,rgba(255,255,255,.07),rgba(255,255,255,0) 45%),var(--glass);border:1px solid var(--line);border-radius:10px;padding:10px 26px 12px;backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.1),0 8px 24px rgba(0,0,0,.35);
+  text-shadow:0 2px 0 rgba(0,0,0,.6);opacity:0;transition:opacity .15s,box-shadow .2s}
+#prompt.on{opacity:1}
+#prompt.wait{color:var(--foam-dim);font-size:clamp(20px,4.4vw,32px)}
+#prompt.ready{color:var(--sun);border-color:rgba(245,197,66,.6);animation:breathe 1.2s ease-in-out infinite alternate}
+#prompt.go{color:var(--sun);border-color:rgba(245,197,66,.7);box-shadow:inset 0 1px 0 rgba(255,255,255,.1),0 0 26px rgba(245,197,66,.45);animation:pulse .35s ease-in-out infinite alternate}
+#prompt.run{color:var(--coral);border-color:rgba(255,90,90,.7);box-shadow:inset 0 1px 0 rgba(255,255,255,.1),0 0 26px rgba(255,90,90,.5);animation:pulse .3s ease-in-out infinite alternate}
+#prompt.slack{color:var(--amber);border-color:rgba(247,165,59,.7);box-shadow:inset 0 1px 0 rgba(255,255,255,.1),0 0 20px rgba(247,165,59,.4)}
+#prompt.reel{color:var(--kelp);border-color:rgba(60,196,124,.5);box-shadow:inset 0 1px 0 rgba(255,255,255,.1),0 0 18px rgba(60,196,124,.3)}
+#prompt small{display:block;text-align:center;font-family:var(--f-score);font-size:13px;letter-spacing:.2em;font-weight:600;color:var(--foam-dim);text-transform:uppercase;margin-top:4px}
+@keyframes pulse{from{transform:translateX(-50%) scale(1)}to{transform:translateX(-50%) scale(1.08)}}
+@keyframes breathe{from{transform:translateX(-50%) scale(1)}to{transform:translateX(-50%) scale(1.04)}}
+#hint{position:absolute;left:50%;top:26%;transform:translateX(-50%) scale(.94);width:max-content;max-width:90vw;text-align:center;font-family:var(--f-score);font-size:clamp(16px,3.4vw,24px);font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--foam);background:var(--glass);border:1px solid var(--line);box-shadow:inset 0 1px 0 rgba(255,255,255,.1),0 8px 20px rgba(0,0,0,.35);padding:8px 14px 7px;border-radius:4px;opacity:0;transition:opacity .15s,transform .15s}
+#hint.on{opacity:1;transform:translateX(-50%) scale(1)}
+#coach{position:absolute;left:50%;top:calc(66px + env(safe-area-inset-top,0px));transform:translateX(-50%);width:max-content;max-width:min(90vw,520px);text-align:center;font-family:var(--f-ui);font-size:clamp(14px,2.4vw,17px);font-weight:500;line-height:1.35;color:var(--foam);background:linear-gradient(180deg,rgba(255,255,255,.06),rgba(255,255,255,0) 50%),var(--glass);border:1px solid rgba(245,197,66,.45);box-shadow:inset 0 1px 0 rgba(255,255,255,.1),0 8px 20px rgba(0,0,0,.35);padding:9px 14px;border-radius:6px;opacity:0;transition:opacity .2s;text-wrap:pretty}
+#coach.on{opacity:1}
+@media (max-width:640px){#coach{top:calc(112px + env(safe-area-inset-top,0px))}}
+
+#callout{position:absolute;left:0;right:0;top:32%;text-align:center;opacity:0;transform:translateY(8px) scale(.96);transition:opacity .18s,transform .18s;padding-inline:var(--gutter-l) var(--gutter-r)}
+#callout.on{opacity:1;transform:none}
+#callout .chip{display:inline-block;font-family:var(--f-score);font-size:14px;font-weight:700;letter-spacing:.22em;text-transform:uppercase;background:linear-gradient(180deg,#ffe49a,var(--sun) 60%);color:#1a1200;padding:5px 12px 4px;border-radius:3px;margin-bottom:10px;box-shadow:inset 0 1px 0 rgba(255,255,255,.6),0 3px 10px rgba(0,0,0,.4)}
+#callout .chip.red{background:linear-gradient(180deg,#ff9b9b,var(--coral) 60%);color:#3a0000;box-shadow:inset 0 1px 0 rgba(255,255,255,.4),0 3px 10px rgba(0,0,0,.4)}
+#callout .main{font-family:var(--f-display);font-size:clamp(38px,10vw,104px);line-height:.95;letter-spacing:.02em;text-transform:uppercase;text-shadow:0 3px 0 rgba(0,0,0,.65),0 0 3px rgba(0,0,0,.8),0 0 50px rgba(0,0,0,.75);text-wrap:balance}
+#callout .main.gold{color:var(--sun)}
+#callout .main.red{color:#ffb0b0;text-shadow:0 3px 0 rgba(40,0,0,.7),0 0 4px rgba(0,0,0,.9),0 0 50px rgba(0,0,0,.8)}
+#callout .sub{margin-top:8px;font-family:var(--f-score);font-size:clamp(16px,3.2vw,26px);font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--foam);text-shadow:0 2px 0 rgba(0,0,0,.7),0 0 16px rgba(0,0,0,.7);background:rgba(4,18,32,.35);display:inline-block;padding:3px 10px;border-radius:4px;backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px)}
+#callout .weight{margin-top:8px;font-family:var(--f-score);font-weight:700;font-variant-numeric:tabular-nums;font-size:clamp(40px,9vw,84px);line-height:1;color:var(--sun);text-shadow:0 3px 0 rgba(0,0,0,.6),0 0 30px rgba(245,197,66,.5)}
+#callout .weight span{font-size:.45em;letter-spacing:.2em;color:var(--foam-dim);margin-left:6px}
+
+/* screens */
+.screen{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;
+  padding-block:calc(24px + env(safe-area-inset-top,0px)) calc(24px + env(safe-area-inset-bottom,0px));padding-left:var(--gutter-l);padding-right:var(--gutter-r);overflow:auto;touch-action:pan-y}
+#title{overflow:hidden}
+#title::after{content:"";position:absolute;inset:-4%;background:url("img/leap.jpg") center/cover no-repeat;z-index:-2;animation:kenburns 22s ease-in-out infinite alternate}
+#title::before{content:"";position:absolute;inset:0;background:linear-gradient(to bottom,rgba(6,26,46,.25) 0%,rgba(6,26,46,.5) 45%,rgba(6,26,46,.92) 100%);z-index:-1}
+@keyframes kenburns{0%{transform:scale(1.04) translate(0,0)}100%{transform:scale(1.14) translate(-1.5%,-1.5%)}}
+@media (prefers-reduced-motion:reduce){#title::after{animation:none}}
+#final{background:radial-gradient(ellipse at 50% 0%,#123a5a 0%,var(--sea) 60%)}
+#fGrade{text-shadow:0 4px 0 rgba(0,0,0,.5),0 0 60px rgba(245,197,66,.35)}
+#fGrade.top{color:var(--sun);text-shadow:0 4px 0 rgba(0,0,0,.5),0 0 70px rgba(245,197,66,.7)}
+.score-big{animation:scorePop .5s cubic-bezier(.2,1.4,.4,1) .15s both}
+@keyframes scorePop{0%{transform:scale(.7);opacity:0}100%{transform:scale(1);opacity:1}}
+@media (prefers-reduced-motion:reduce){.score-big{animation:none}}
+.screen>*{position:relative}
+.eyebrow{font-family:var(--f-score);font-size:13px;font-weight:700;letter-spacing:.3em;text-transform:uppercase;color:var(--sun);margin:0 0 10px}
+.h1{font-family:var(--f-display);font-size:clamp(52px,13vw,128px);line-height:.9;letter-spacing:.01em;margin:0;text-transform:uppercase;text-shadow:0 4px 0 rgba(0,0,0,.5);text-wrap:balance}
+.h1 em{font-style:normal;color:var(--sun)}
+.lede{max-width:36ch;font-size:clamp(15px,2.4vw,19px);line-height:1.45;color:var(--foam);margin:18px 0 0;text-wrap:pretty}
+.demo{display:flex;align-items:center;gap:10px;margin:22px auto 0;max-width:480px;width:100%;text-align:left;background:rgba(4,18,32,.62);border:1px solid var(--line);border-radius:8px;padding:14px 18px 14px 16px;box-sizing:border-box}
+.demo-meter{position:relative;flex:0 0 26px;height:140px;margin-right:64px;border-radius:13px;background:rgba(241,246,248,.1);border:1px solid var(--line)}
+.demo-zone{position:absolute;z-index:2;left:0;right:0;bottom:30%;height:42%;background:rgba(60,196,124,.3);border-top:2px solid var(--kelp);border-bottom:2px solid var(--kelp)}
+.demo-red{position:absolute;z-index:2;left:0;right:0;top:0;height:12%;background:rgba(255,90,90,.35);border-bottom:2px solid var(--coral);border-radius:13px 13px 0 0}
+.demo-fill{position:absolute;z-index:1;left:0;right:0;bottom:0;height:40%;border-radius:13px;background:linear-gradient(to top,#5fd0ff,var(--kelp) 30%,var(--kelp) 70%,var(--amber) 85%,var(--coral));background-size:100% 140px;background-position:bottom;animation:demoFill 3.2s ease-in-out infinite}
+.demo-word{position:absolute;z-index:3;left:36px;transform:translateY(-50%);font-family:var(--f-display);font-size:15px;letter-spacing:.06em;white-space:nowrap;opacity:0}
+.demo-word.hold{top:72%;color:var(--kelp);animation:demoHold 3.2s ease-in-out infinite}
+.demo-word.go{top:22%;color:var(--coral);animation:demoGo 3.2s ease-in-out infinite}
+@keyframes demoFill{0%{height:34%}45%{height:86%}55%{height:90%}100%{height:34%}}
+@keyframes demoHold{0%,40%{opacity:1}48%,100%{opacity:0}}
+@keyframes demoGo{0%,42%{opacity:0}50%,80%{opacity:1}90%,100%{opacity:0}}
+.demo-steps{margin:0;padding-left:18px;font-size:clamp(13px,2.2vw,15px);line-height:1.4;color:var(--foam);display:flex;flex-direction:column;gap:7px;min-width:0}
+.demo-steps b{color:var(--sun);font-weight:600}
+.cta{position:relative;overflow:hidden;margin-top:28px;border:0;background:linear-gradient(180deg,#ffdb73,var(--sun) 55%);color:#1a1200;font-family:var(--f-display);font-size:clamp(18px,3vw,24px);letter-spacing:.05em;text-transform:uppercase;padding:16px 28px 14px;border-radius:6px;box-shadow:inset 0 1px 0 rgba(255,255,255,.6),0 6px 0 #a3801e,0 12px 30px rgba(0,0,0,.5);transition:transform .08s,box-shadow .08s}
+.cta:active{transform:translateY(4px);box-shadow:inset 0 1px 0 rgba(255,255,255,.6),0 2px 0 #a3801e,0 6px 14px rgba(0,0,0,.5)}
+.cta:not([disabled])::after{content:"";position:absolute;top:0;left:-60%;width:40%;height:100%;background:linear-gradient(115deg,transparent,rgba(255,255,255,.55),transparent);animation:ctaSheen 3.2s ease-in-out infinite}
+@keyframes ctaSheen{0%{left:-60%}30%,100%{left:140%}}
+@media (prefers-reduced-motion:reduce){.cta::after{animation:none;display:none}}
+.cta[disabled]{background:#4a5a66;color:#c9d2d8;box-shadow:0 6px 0 #22303a;cursor:wait}
+.note{margin:14px 0 0;font-family:var(--f-score);font-size:13px;letter-spacing:.14em;text-transform:uppercase;color:var(--foam-dim)}
+.loadbar{width:min(320px,80vw);height:4px;background:rgba(241,246,248,.15);border-radius:2px;margin:12px auto 0;overflow:hidden}
+.loadbar i{display:block;height:100%;width:0;background:var(--sun);transition:width .3s}
+.stats{display:grid;grid-template-columns:repeat(3,minmax(84px,1fr));gap:10px;margin:22px 0 0;max-width:420px;width:100%}
+.stat{background:linear-gradient(180deg,rgba(255,255,255,.08),rgba(255,255,255,0) 45%),var(--glass);border:1px solid var(--line);box-shadow:inset 0 1px 0 rgba(255,255,255,.12),0 4px 14px rgba(0,0,0,.3);border-radius:6px;padding:12px 8px 10px;font-family:var(--f-score);font-variant-numeric:tabular-nums}
+.stat small{display:block;font-size:11px;letter-spacing:.18em;color:var(--foam-dim);font-weight:600;text-transform:uppercase;margin-bottom:4px}
+.stat b{font-size:30px;font-weight:700;line-height:1;text-shadow:0 1px 0 rgba(0,0,0,.4)}
+.stat b.gold{color:var(--sun);text-shadow:0 0 14px rgba(245,197,66,.5),0 1px 0 rgba(0,0,0,.4)}
+.score-big{font-family:var(--f-score);font-weight:700;font-variant-numeric:tabular-nums;font-size:clamp(64px,16vw,140px);line-height:1;margin-top:6px;letter-spacing:-.01em}
+.score-big span{font-size:.28em;letter-spacing:.2em;color:var(--foam-dim);margin-left:8px}
+.strip{display:flex;flex-wrap:wrap;justify-content:center;gap:6px;margin:18px 0 0;max-width:460px}
+.strip i{font-style:normal;font-family:var(--f-score);font-weight:700;font-size:13px;letter-spacing:.06em;min-width:64px;padding:7px 8px 5px;border-radius:3px;background:rgba(241,246,248,.08);border:1px solid var(--line);box-shadow:0 2px 8px rgba(0,0,0,.25);color:var(--foam-dim);font-variant-numeric:tabular-nums}
+.strip i.hit{color:#1a1200;background:linear-gradient(180deg,#ffe49a,var(--sun) 60%);border-color:var(--sun);box-shadow:inset 0 1px 0 rgba(255,255,255,.5),0 2px 8px rgba(245,197,66,.4)}
+.strip i.k{color:#ffb3b3;border-color:rgba(255,90,90,.5);background:rgba(255,90,90,.14)}
+.best{display:inline-block;margin-top:14px;font-family:var(--f-score);font-size:13px;font-weight:700;letter-spacing:.22em;text-transform:uppercase;color:var(--sun);border:1px solid rgba(245,197,66,.5);padding:6px 12px 5px;border-radius:3px;animation:bestGlow 1.8s ease-in-out infinite alternate}
+@keyframes bestGlow{from{box-shadow:0 0 0 rgba(245,197,66,0)}to{box-shadow:0 0 16px rgba(245,197,66,.6)}}
+@media (prefers-reduced-motion:reduce){.best{animation:none;box-shadow:0 0 16px rgba(245,197,66,.5)}}
+#linesOut{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none;opacity:0;transition:opacity .2s}
+#linesOut.on{opacity:1}
+#linesOut.on div{animation:linesPop .5s cubic-bezier(.2,1.4,.4,1) both}
+#linesOut div{font-family:var(--f-display);font-size:clamp(44px,12vw,120px);text-transform:uppercase;letter-spacing:.03em;color:var(--sun);text-shadow:0 4px 0 rgba(0,0,0,.55),0 0 50px rgba(245,197,66,.6)}
+@keyframes linesPop{0%{transform:scale(.8);opacity:0}100%{transform:scale(1);opacity:1}}
+@media (prefers-reduced-motion:reduce){#linesOut.on div{animation:none}}
+@media (prefers-reduced-motion:reduce){#prompt.go,#prompt.ready,#prompt.run,#danger.on{animation:none}.demo-fill{animation:none;height:55%}.demo-word.hold{animation:none;opacity:1}}
+@media (max-width:520px){.cell b{font-size:19px}.cell{min-width:46px;padding:5px 8px 4px}}
+</style>
+
+<div id="stage">
+  <video id="clip" playsinline muted preload="auto"></video>
+  <div id="vignette"></div>
+  <div id="danger"></div>
+  <div id="failDim"></div>
+  <canvas id="fx"></canvas>
+  <div id="splashFlash"></div>
+  <div id="goldFlash"></div>
+  <div id="dip"></div>
+
+  <div id="hud" hidden>
+    <div class="board">
+      <div class="cell"><small>Cast</small><b id="bCast">1/3</b></div>
+      <div class="cell"><small>Landed</small><b id="bLanded">0</b></div>
+      <div class="cell gold"><small>Total lb</small><b id="bLb">0</b></div>
+      <div class="cell"><small>Score</small><b id="bScore">0</b></div>
+    </div>
+    <div id="linebar">
+      <div class="lab"><span>Line in</span><b id="lbPct">0%</b></div>
+      <div class="track">
+        <div class="prog" id="lbProg"></div>
+        <svg class="boat" viewBox="0 0 26 16" aria-hidden="true"><path d="M1 8h24l-4 7H5z" fill="#f1f6f8"/><path d="M13 1v7" stroke="#f1f6f8" stroke-width="2"/></svg>
+        <svg class="fish" id="lbFish" viewBox="0 0 34 20" aria-hidden="true"><path d="M2 10c6-7 14-9 22-5l8-4-2 9 2 9-8-4c-8 4-16 2-22-5z" fill="#5fd0ff"/><circle cx="8" cy="9" r="1.6" fill="#061a2e"/></svg>
+      </div>
+    </div>
+    <div id="coach"></div>
+    <div id="meter">
+      <div class="m-cap red">SNAP</div>
+      <div class="m-track" id="mTrack">
+        <div class="m-zone green" id="zGreen"></div>
+        <div class="m-zone red" id="zRed"></div>
+        <div class="m-fill" id="mFill"></div>
+      </div>
+      <div class="m-cap">SLACK</div>
+    </div>
+    <div class="m-tag" id="mTag" hidden>KEEP IT HERE &rarr;</div>
+    <div id="prompt"><span id="pText">Tap to cast</span><small id="pSub">cast 1 of 3</small></div>
+    <div id="hint"></div>
+    <div id="callout"><div class="chip" id="cChip" hidden></div><div class="main" id="cMain"></div><div class="weight" id="cWeight" hidden><span id="cLb">0</span><span>LB</span></div><div class="sub" id="cSub"></div></div>
+  </div>
+
+  <div id="linesOut"><div>Lines out!</div></div>
+
+  <div id="title" class="screen">
+    <p class="eyebrow">First person &middot; Blue-water fishing</p>
+    <h1 class="h1">Clutch<br><em>Catch</em></h1>
+    <p class="lede">Three casts over blue water. Set the hook the instant the rod tip dips, then keep the line tight through every run and jump without snapping it.</p>
+    <div class="demo" aria-label="How to play">
+      <div class="demo-meter"><div class="demo-red"></div><div class="demo-zone"></div><div class="demo-fill"></div><div class="demo-word hold">HOLD</div><div class="demo-word go">LET GO!</div></div>
+      <ol class="demo-steps">
+        <li><b>Tap to cast</b>, then watch the rod tip. Tap the moment it dips to set the hook.</li>
+        <li><b>Hold anywhere</b> to reel. The tension meter climbs while you hold.</li>
+        <li><b>Let go when it runs</b> or the line snaps. Keep the needle in the green and the fish comes to the boat.</li>
+      </ol>
+    </div>
+    <button class="cta" id="btnStart" disabled>Loading the water&hellip;</button>
+    <div class="loadbar"><i id="loadFill"></i></div>
+    <p class="note" id="titleBest" hidden></p>
+  </div>
+
+  <div id="final" class="screen" hidden>
+    <p class="eyebrow">Trip over &middot; 3 casts</p>
+    <h1 class="h1" id="fGrade">Captain</h1>
+    <div class="score-big"><span id="fScore">0</span><span>PTS</span></div>
+    <div class="stats">
+      <div class="stat"><small>Landed</small><b class="gold" id="fLanded">0/3</b></div>
+      <div class="stat"><small>Biggest</small><b id="fBig">&mdash;</b></div>
+      <div class="stat"><small>Total lb</small><b id="fLb">0</b></div>
+    </div>
+    <div class="strip" id="fStrip"></div>
+    <div class="best" id="fBest" hidden>New personal best</div>
+    <button class="cta" id="btnAgain">Head back out</button>
+  </div>
+</div>
+
+<script>
+(() => {
+const $ = s => document.querySelector(s);
+const clamp = (v,a,b) => Math.max(a, Math.min(b, v));
+const rand = (a,b) => a + Math.random()*(b-a);
+const lerp = (a,b,t) => a + (b-a)*t;
+
+/* ---------- Clip map (seconds into the clip) ---------- */
+const C = { biteSlow:3.3, bite:3.55, perfectEnd:4.0, lateEnd:4.6, loopFrom:14.9, loopTo:9.0, jump:15.0, splashDown:17.6, end:19.3, calm:19.2 };
+const RUNS = [[6.1,7.4],[10.5,11.7],[13.0,14.3]];            // when the fish surges in the footage
+const BITE_RATE=0.6, FIGHT_RATE=0.45, FINALE_RATE=0.75;
+const CASTS = 3;
+const FISH = [ { pull:0.20, run:0.72, w:[45,65] }, { pull:0.27, run:0.88, w:[60,88] }, { pull:0.34, run:1.0, w:[80,118] } ];
+const GREEN=[0.28,0.75], RED=0.88;
+
+/* ---------- Audio (synthesized) ---------- */
+const AudioFX = (() => {
+  let ctx, master, noise, crank, crankGain, creak, creakGain, waterGain;
+  const AC = window.AudioContext || window.webkitAudioContext;
+  function init(){
+    if (ctx || !AC) return;
+    ctx = new AC(); master = ctx.createGain(); master.gain.value = 0.9; master.connect(ctx.destination);
+    const n = ctx.sampleRate*2, b = ctx.createBuffer(1,n,ctx.sampleRate), d = b.getChannelData(0);
+    let last=0; for (let i=0;i<n;i++){ const w=Math.random()*2-1; last=(last+0.02*w)/1.02; d[i]=last*3.5; }   // brown-ish noise for water
+    noise = b;
+    const s=src(noise,true), lp=ctx.createBiquadFilter(); lp.type='lowpass'; lp.frequency.value=600;
+    waterGain=ctx.createGain(); waterGain.gain.value=0.08; s.connect(lp); lp.connect(waterGain); waterGain.connect(master); s.start();
+    const lfo=ctx.createOscillator(); lfo.frequency.value=0.18; const lg=ctx.createGain(); lg.gain.value=0.03; lfo.connect(lg); lg.connect(waterGain.gain); lfo.start();
+    // reel crank: filtered noise, opened while reeling
+    const cs=src(noise,true), bp=ctx.createBiquadFilter(); bp.type='bandpass'; bp.frequency.value=1400; bp.Q.value=2.2;
+    crankGain=ctx.createGain(); crankGain.gain.value=0; cs.connect(bp); bp.connect(crankGain); crankGain.connect(master); cs.start(); crank=cs;
+    const m=ctx.createOscillator(); m.type='square'; m.frequency.value=11; const mg=ctx.createGain(); mg.gain.value=0.5; m.connect(mg); mg.connect(bp.frequency); m.start();
+    // rod creak: detuned saw, opened near the snap
+    creak=ctx.createOscillator(); creak.type='sawtooth'; creak.frequency.value=90; const cf=ctx.createBiquadFilter(); cf.type='lowpass'; cf.frequency.value=500;
+    creakGain=ctx.createGain(); creakGain.gain.value=0; creak.connect(cf); cf.connect(creakGain); creakGain.connect(master); creak.start();
+    const wob=ctx.createOscillator(); wob.frequency.value=5; const wg=ctx.createGain(); wg.gain.value=12; wob.connect(wg); wg.connect(creak.frequency); wob.start();
+  }
+  function resume(){ if (ctx && ctx.state==='suspended') ctx.resume(); }
+  function src(buf,loop){ const s=ctx.createBufferSource(); s.buffer=buf; s.loop=!!loop; return s; }
+  function env(node,t,peak,attack,decay){ const g=ctx.createGain(); g.gain.setValueAtTime(0.0001,t); g.gain.exponentialRampToValueAtTime(peak,t+attack); g.gain.exponentialRampToValueAtTime(0.0001,t+attack+decay); node.connect(g); g.connect(master); return g; }
+  function white(sec){ const n=Math.floor(ctx.sampleRate*sec), b=ctx.createBuffer(1,n,ctx.sampleRate), d=b.getChannelData(0); for(let i=0;i<n;i++) d[i]=Math.random()*2-1; return b; }
+  let wn=null; const W=()=>wn||(wn=white(1.5));
+  function setReel(holding, tension, pull){
+    if(!ctx) return; const t=ctx.currentTime;
+    crankGain.gain.setTargetAtTime(holding?0.05+0.08*tension:0, t, 0.05);
+    creakGain.gain.setTargetAtTime(tension>0.78?0.12*clamp((tension-0.78)/0.22,0,1):0, t, 0.06);
+  }
+  function click(vol){ if(!ctx) return; const t=ctx.currentTime; const s=src(W()); const hp=ctx.createBiquadFilter(); hp.type='highpass'; hp.frequency.value=2500; s.connect(hp); env(hp,t,vol,0.002,0.025); s.start(t); s.stop(t+0.05); }
+  function splash(size){ if(!ctx) return; const t=ctx.currentTime; const s=src(W()); const lp=ctx.createBiquadFilter(); lp.type='lowpass'; lp.frequency.setValueAtTime(4000,t); lp.frequency.exponentialRampToValueAtTime(400,t+0.25+0.3*size); s.connect(lp); env(lp,t,0.25+0.5*size,0.02,0.3+0.4*size); s.start(t); s.stop(t+1.2); }
+  function thunk(){ if(!ctx) return; const t=ctx.currentTime; const o=ctx.createOscillator(); o.type='sine'; o.frequency.setValueAtTime(180,t); o.frequency.exponentialRampToValueAtTime(55,t+0.16); env(o,t,0.6,0.004,0.2); o.start(t); o.stop(t+0.3); click(0.5); }
+  function snap(){ if(!ctx) return; const t=ctx.currentTime; click(0.9); const o=ctx.createOscillator(); o.type='triangle'; o.frequency.setValueAtTime(1400,t); o.frequency.exponentialRampToValueAtTime(140,t+0.35); env(o,t,0.35,0.003,0.4); o.start(t); o.stop(t+0.5); }
+  function cue(){ if(!ctx) return; [0,0.11].forEach(d=>{ const t=ctx.currentTime+d; const o=ctx.createOscillator(); o.type='square'; o.frequency.value=1700; env(o,t,0.1,0.002,0.05); o.start(t); o.stop(t+0.08); }); }
+  function groan(){ if(!ctx) return; const t=ctx.currentTime; const o=ctx.createOscillator(); o.type='triangle'; o.frequency.setValueAtTime(220,t); o.frequency.exponentialRampToValueAtTime(110,t+0.7); env(o,t,0.12,0.05,0.7); o.start(t); o.stop(t+0.9); }
+  function fanfare(){ if(!ctx) return; [392,523,659,784,1046].forEach((f,i)=>{ const t=ctx.currentTime+0.2+i*0.1; const o=ctx.createOscillator(); o.type='square'; o.frequency.value=f; const lp=ctx.createBiquadFilter(); lp.type='lowpass'; lp.frequency.value=2400; o.connect(lp); env(lp,t,0.09,0.01,i===4?0.6:0.14); o.start(t); o.stop(t+0.9); }); }
+  function whoosh(){ if(!ctx) return; const t=ctx.currentTime; const s=src(W()); const bp=ctx.createBiquadFilter(); bp.type='bandpass'; bp.Q.value=1.5; bp.frequency.setValueAtTime(600,t); bp.frequency.exponentialRampToValueAtTime(3000,t+0.3); s.connect(bp); env(bp,t,0.3,0.05,0.35); s.start(t); s.stop(t+0.6); }
+  return {init,resume,setReel,click,splash,thunk,snap,cue,groan,fanfare,whoosh};
+})();
+
+/* ---------- FX overlay: spray, bite cue, confetti ---------- */
+const FX = (() => {
+  const c=$('#fx'), g=c.getContext('2d'); let W=1,H=1; const parts=[]; let cueT=0;
+  function resize(){ const dpr=Math.min(2,window.devicePixelRatio||1); W=c.clientWidth; H=c.clientHeight; c.width=Math.round(W*dpr); c.height=Math.round(H*dpr); g.setTransform(dpr,0,0,dpr,0,0); }
+  window.addEventListener('resize',resize); resize();
+  function spray(x,y,n,spread,col){ for(let i=0;i<n;i++){ const a=-Math.PI/2+rand(-spread,spread), sp=rand(2,7); parts.push({x,y,vx:Math.cos(a)*sp,vy:Math.sin(a)*sp,life:rand(.6,1),col:col||'#f1f6f8',r:rand(1.2,3.2),g:0.14}); } }
+  function confetti(){ const cols=['#f5c542','#f1f6f8','#5fd0ff','#3cc47c']; for(let i=0;i<120;i++) parts.push({x:rand(0,W),y:-10,vx:rand(-1,1),vy:rand(1,3.5),life:rand(1.2,2),col:cols[i%4],r:rand(2,4),g:0.03}); }
+  function cue(){ cueT=performance.now(); }
+  function draw(now){
+    g.clearRect(0,0,W,H);
+    const ct=(now-cueT)/1000; if(cueT && ct<1.1){ const x=W*0.60, y=H*0.26+Math.sin(ct*18)*4; g.globalAlpha=1-ct*0.6; g.fillStyle='#f5c542'; g.font=`bold ${Math.round(H*0.11)}px "Alfa Slab One", Rockwell, serif`; g.textAlign='center'; g.fillText('!',x,y+H*0.09); g.strokeStyle='rgba(245,197,66,.8)'; g.lineWidth=3; g.beginPath(); g.arc(W*0.62,H*0.42,10+ct*70,0,Math.PI*2); g.stroke(); g.globalAlpha=1; }
+    for(let i=parts.length-1;i>=0;i--){ const p=parts[i]; p.x+=p.vx; p.y+=p.vy; p.vy+=p.g; p.vx*=0.99; p.life-=0.016; if(p.life<=0){ parts.splice(i,1); continue; } g.globalAlpha=Math.max(0,Math.min(1,p.life)); g.fillStyle=p.col; g.beginPath(); g.arc(p.x,p.y,p.r,0,Math.PI*2); g.fill(); }
+    g.globalAlpha=1;
+  }
+  return { spray, confetti, cue, draw, get W(){return W;}, get H(){return H;} };
+})();
+
+/* ---------- Game state ---------- */
+const ui = {
+  hud:$('#hud'), title:$('#title'), final:$('#final'), meter:$('#meter'), fill:$('#mFill'), tag:$('#mTag'), track:$('#mTrack'), linebar:$('#linebar'), lbProg:$('#lbProg'), lbFish:$('#lbFish'), lbPct:$('#lbPct'),
+  prompt:$('#prompt'), pText:$('#pText'), pSub:$('#pSub'), hint:$('#hint'), coach:$('#coach'), callout:$('#callout'), cChip:$('#cChip'), cMain:$('#cMain'), cSub:$('#cSub'), cWeight:$('#cWeight'), cLb:$('#cLb'),
+  bCast:$('#bCast'), bLanded:$('#bLanded'), bLb:$('#bLb'), bScore:$('#bScore'), dip:$('#dip'), splashFlash:$('#splashFlash'), goldFlash:$('#goldFlash'), danger:$('#danger'), failDim:$('#failDim'), linesOut:$('#linesOut'),
+};
+const clip=$('#clip');
+let state='title', cast=0, score=0, landed=0, totalLb=0, biggest=0, log=[], timers=[];
+let cur=null, holding=false;
+const later=(fn,ms)=>{ const id=setTimeout(fn,ms); timers.push(id); return id; };
+const clearTimers=()=>{ timers.forEach(clearTimeout); timers=[]; };
+
+/* The game runs on its own clock (vt = seconds into the clip); the clip follows and is nudged back in line if it drifts.
+   If the clip refuses to play, the whole cast still runs on the clock over the still photo. */
+let vt=0, vtRate=1, vtLast=0, videoStarted=false, playAt=0, clockMode=false, lastSeek=0, playFails=0, pendingSeek=null;
+
+function layoutMeter(){
+  const h=ui.track.clientHeight; ui.fill.style.setProperty('--track-h',h+'px');
+  const z=(el,lo,hi)=>{ el.style.bottom=(lo*100)+'%'; el.style.height=((hi-lo)*100)+'%'; };
+  z($('#zGreen'),GREEN[0],GREEN[1]); z($('#zRed'),RED,1);
+  const r=ui.track.getBoundingClientRect(); ui.tag.style.top=(r.top+r.height*(1-(GREEN[0]+GREEN[1])/2))+'px'; ui.tag.style.right=(window.innerWidth-r.left+8)+'px';
+}
+window.addEventListener('resize',layoutMeter);
+function setBoard(){ ui.bCast.textContent=`${Math.min(cast+1,CASTS)}/${CASTS}`; ui.bLanded.textContent=landed; ui.bLb.textContent=totalLb; ui.bScore.textContent=score.toLocaleString(); }
+function setPrompt(cls,text,sub){ ui.pText.textContent=text; ui.pSub.textContent=sub||''; ui.prompt.className=cls?'on '+cls:''; }
+let hintTimer=null;
+function showHint(text){ ui.hint.textContent=text; ui.hint.classList.add('on'); clearTimeout(hintTimer); hintTimer=setTimeout(()=>ui.hint.classList.remove('on'),1000); }
+function showCallout(main,sub,opts={}){
+  ui.cMain.textContent=main; ui.cMain.className='main'+(opts.gold?' gold':'')+(opts.red?' red':''); ui.cSub.textContent=sub||'';
+  if(opts.chip){ ui.cChip.textContent=opts.chip; ui.cChip.className='chip'+(opts.chipRed?' red':''); ui.cChip.hidden=false; } else ui.cChip.hidden=true;
+  if(opts.lb){ ui.cLb.textContent=opts.lb; ui.cWeight.hidden=false; } else ui.cWeight.hidden=true;
+  ui.callout.classList.add('on');
+}
+function hideCallout(){ ui.callout.classList.remove('on'); }
+function seekClip(t){ vt=t; vtLast=performance.now(); if(clockMode||cur.stalled) return; try{ clip.currentTime=t; }catch(e){ pendingSeek=t; } lastSeek=performance.now(); }
+function setRate(r){ vtRate=r; try{ clip.playbackRate=r; }catch(e){} }
+
+/* ---- cast lifecycle: ready -> wait -> bite -> fight -> finale | failed ---- */
+const COACH = [
+  'Tap to cast. When the rod tip dips, tap right away to set the hook.',
+  'Hold to reel. When the fish runs, let go until the needle drops back into the green.',
+];
+function readyCast(){
+  clearTimers(); hideCallout(); ui.failDim.classList.remove('on'); ui.danger.classList.remove('on'); ui.meter.classList.remove('on','danger'); ui.tag.hidden=true; ui.linebar.classList.remove('on'); ui.fill.style.height='0%';
+  const f=FISH[cast];
+  cur={ fish:f, weight:Math.round(rand(f.w[0],f.w[1])), hook:null, tension:0.45, prog:0.2, slackT:0, clean:true, fightT:0, maxT:0, runOn:false, lastClickT:0, stalled:false, loops:0, cueDone:false, earlyTaps:0 };
+  clip.pause(); try{ clip.currentTime=0; }catch(e){} setRate(1);
+  if(!clockMode && clip.readyState>=1) clip.classList.add('on'); else clip.classList.remove('on');
+  state='ready'; setBoard(); holding=false;
+  setPrompt('ready','Tap to cast',`cast ${cast+1} of ${CASTS}`);
+  if(cast===0){ ui.coach.textContent=COACH[0]; ui.coach.classList.add('on'); } else ui.coach.classList.remove('on');
+}
+function castLine(){            // inside the player's tap, so the clip may play on every phone
+  state='wait'; videoStarted=false; playAt=performance.now(); vt=0; vtLast=playAt; setRate(1);
+  AudioFX.whoosh(); setPrompt('wait','Wait for the bite\u2026','watch the rod tip');
+  if(clockMode) return;
+  try{ clip.currentTime=0; }catch(e){}
+  clip.classList.add('on');
+  const p=clip.play(); if(p&&p.catch) p.catch(()=>{ playFails++; if(playFails>=2) clockMode=true; cur.stalled=true; clip.classList.remove('on'); });
+}
+function biteCue(){ cur.cueDone=true; ui.coach.classList.remove('on'); FX.cue(); AudioFX.cue(); setPrompt('go','Fish on!','tap to set the hook'); FX.spray(FX.W*0.62,FX.H*0.42,30,0.9,'#dff3ff'); AudioFX.splash(0.4); }
+function setHook(){
+  const late = vt>C.perfectEnd; cur.hook = late?'late':'perfect';
+  AudioFX.thunk(); AudioFX.splash(0.6); FX.spray(FX.W*0.62,FX.H*0.42,60,1.1); ui.splashFlash.classList.remove('on'); void ui.splashFlash.offsetWidth; ui.splashFlash.classList.add('on');
+  cur.tension = late?0.62:0.45; cur.prog = late?0.1:0.22; cur.fightT=0; cur.fightStartVt=vt;
+  showHint(late?'Hooked \u2014 a little late':'Perfect hookset!');
+  state='fight'; setRate(FIGHT_RATE);
+  ui.meter.classList.add('on'); layoutMeter(); ui.tag.hidden=false; ui.linebar.classList.add('on');
+  setPrompt('reel','Hold to reel','let go when it runs');
+  if(cast===0){ ui.coach.textContent=COACH[1]; ui.coach.classList.add('on'); later(()=>ui.coach.classList.remove('on'),5000); }
+}
+function missBite(why){
+  state='failed'; setRate(1); seekClip(C.calm); ui.failDim.classList.add('on'); AudioFX.groan(); setPrompt('', '');
+  showCallout('Got away', why, {red:true, chip:'No hookset', chipRed:true}); log.push({k:'miss'});
+  later(nextCast, 2300);
+}
+function fishPull(){ const f=cur.fish; let p=f.pull; let on=false; for(const r of RUNS){ if(vt>=r[0]&&vt<=r[1]){ on=true; p=f.run; break; } } return {p,on}; }
+function stepFight(dt){
+  const {p,on}=fishPull();
+  if(on && !cur.runOn){ cur.runOn=true; setPrompt('run','It\u2019s running!','let go'); ui.danger.classList.add('on'); FX.spray(FX.W*rand(0.5,0.75),FX.H*0.45,40,1.2); AudioFX.splash(0.8); }
+  if(!on && cur.runOn){ cur.runOn=false; ui.danger.classList.remove('on'); }
+  let T=cur.tension, P=cur.prog;
+  if(holding){ T += (0.35 + p*0.9)*dt; P += (T>0.18 ? (T>=GREEN[0]&&T<=GREEN[1] ? 0.16 : 0.10) : 0.04)*dt - p*0.02*dt; }
+  else { T -= (0.6 - p*0.35)*dt; P -= (0.02 + p*0.08)*dt; }
+  T=clamp(T,0,1.05); P=clamp(P,0,1); cur.tension=T; cur.prog=P; cur.maxT=Math.max(cur.maxT,T); if(T>RED) cur.clean=false;
+  if(T<0.08){ cur.slackT+=dt; } else cur.slackT=Math.max(0,cur.slackT-dt*2);
+  // prompts: the run warning wins, then slack, then the default
+  if(!cur.runOn){ if(cur.slackT>0.6) setPrompt('slack','Line\u2019s slack!','hold to reel'); else if(T>RED) setPrompt('run','Too tight!','let go'); else if(ui.prompt.className!=='on reel') setPrompt('reel','Hold to reel','let go when it runs'); }
+  ui.meter.classList.toggle('danger', T>RED);
+  // reel drag clicks while giving line against a pulling fish
+  if(!holding && T>0.15){ const interval=1/(6+p*22); if(cur.fightT-cur.lastClickT>interval){ cur.lastClickT=cur.fightT; AudioFX.click(0.12+0.25*p); } }
+  AudioFX.setReel(holding,T,p);
+  ui.fill.style.height=(Math.min(1,T)*100)+'%'; ui.lbProg.style.width=(P*100)+'%'; ui.lbFish.style.left=(P*100)+'%'; ui.lbPct.textContent=Math.round(P*100)+'%';
+  if(T>=1.0) return fail('snap');
+  if(cur.slackT>2.2) return fail('slack');
+  if(P>=1.0) return finale();
+  if(vt>=C.loopFrom){ cur.loops++; ui.splashFlash.classList.remove('on'); void ui.splashFlash.offsetWidth; ui.splashFlash.classList.add('on'); AudioFX.splash(0.7); FX.spray(FX.W*0.6,FX.H*0.5,50,1.3); seekClip(C.loopTo); }
+}
+function fail(kind){
+  state='failed'; holding=false; AudioFX.setReel(false,0,0); ui.danger.classList.remove('on'); ui.meter.classList.remove('danger');
+  if(kind==='snap'){ AudioFX.snap(); FX.spray(FX.W*0.45,FX.H*0.3,30,1.4,'#ffd0d0'); } else AudioFX.groan();
+  setRate(1); seekClip(C.calm); ui.failDim.classList.add('on'); ui.meter.classList.remove('on'); ui.tag.hidden=true; ui.linebar.classList.remove('on'); setPrompt('', '');
+  showCallout(kind==='snap'?'Line snapped':'Threw the hook', kind==='snap'?'let go sooner when it runs':'keep some tension on the line', {red:true, chip:kind==='snap'?'Too tight':'Too loose', chipRed:true});
+  log.push({k:kind}); later(nextCast, 2400);
+}
+function finale(){
+  state='finale'; holding=false; AudioFX.setReel(false,0,0); ui.danger.classList.remove('on'); ui.meter.classList.remove('danger'); ui.tag.hidden=true;
+  setPrompt('wait','Here it comes\u2026',''); ui.meter.classList.remove('on'); setRate(FINALE_RATE); seekClip(C.jump); AudioFX.splash(1); FX.spray(FX.W*0.6,FX.H*0.5,70,1.3);
+  cur.finaleSplashed=false;
+}
+function landIt(){
+  state='landed'; const w=cur.weight; const hookBonus=cur.hook==='perfect'?250:100; const fightBonus=Math.max(0,Math.round((26-cur.fightT)*20)); const cleanBonus=cur.clean?200:0;
+  const pts=w*10+hookBonus+fightBonus+cleanBonus; score+=pts; landed++; totalLb+=w; biggest=Math.max(biggest,w); log.push({k:'land',w});
+  ui.linebar.classList.remove('on'); ui.goldFlash.classList.remove('on'); void ui.goldFlash.offsetWidth; ui.goldFlash.classList.add('on'); FX.confetti(); AudioFX.fanfare(); setPrompt('', '');
+  const bits=[`${cur.fightT.toFixed(1)}s fight`, cur.hook==='perfect'?'perfect hookset':'late hookset', cur.clean?'clean line':'into the red'];
+  showCallout('Sailfish', bits.join(' \u00b7 ')+` \u00b7 +${pts.toLocaleString()}`, {gold:true, chip:'Landed', lb:w});
+  setBoard(); later(nextCast, 3000);
+}
+function nextCast(){ cast++; if(cast>=CASTS) return finish(); ui.dip.classList.add('on'); later(()=>{ ui.dip.classList.remove('on'); readyCast(); },180); }
+function finish(){
+  state='final'; clearTimers(); hideCallout(); ui.meter.classList.remove('on'); ui.tag.hidden=true; ui.linebar.classList.remove('on'); ui.failDim.classList.remove('on'); ui.danger.classList.remove('on'); setPrompt('', ''); clip.pause(); AudioFX.setReel(false,0,0);
+  const grade = score>=3600?'Captain':score>=2600?'First mate':score>=1500?'Deckhand':score>=600?'Weekend angler':'Seasick';
+  $('#fGrade').textContent=grade; $('#fGrade').classList.toggle('top', score>=2600); $('#fScore').textContent=score.toLocaleString(); $('#fLanded').textContent=`${landed}/${CASTS}`; $('#fBig').textContent=biggest?biggest+' lb':'\u2014'; $('#fLb').textContent=totalLb;
+  const strip=$('#fStrip'); strip.innerHTML=''; log.forEach(e=>{ const i=document.createElement('i'); i.className=e.k==='land'?'hit':'k'; i.textContent=e.k==='land'?e.w+' lb':e.k==='snap'?'Snapped':e.k==='slack'?'Threw hook':'Missed'; strip.appendChild(i); });
+  let best=0; try{ best=+localStorage.getItem('clutch-catch-best')||0; }catch(e){}
+  const isBest=score>best&&score>0; if(isBest){ try{ localStorage.setItem('clutch-catch-best',String(score)); }catch(e){} }
+  $('#fBest').hidden=!isBest; ui.hud.hidden=true; ui.final.hidden=false;
+}
+function startGame(){
+  cast=0; score=0; landed=0; totalLb=0; biggest=0; log=[]; cur=null; holding=false;
+  ui.title.hidden=true; ui.final.hidden=true; ui.hud.hidden=false; setBoard();
+  ui.linesOut.classList.add('on'); AudioFX.whoosh(); state='intro';
+  later(()=>{ ui.linesOut.classList.remove('on'); readyCast(); },1100);
+}
+
+/* ---- clock & loop ---- */
+function syncVideo(now){
+  if(clockMode||cur.stalled) return; if(clip.paused||clip.readyState<2) return;
+  if(pendingSeek!==null){ try{ clip.currentTime=pendingSeek; pendingSeek=null; }catch(e){} return; }
+  const d=clip.currentTime-vt; if(Math.abs(d)>0.14 && now-lastSeek>500){ try{ clip.currentTime=vt; }catch(e){} lastSeek=now; }
+}
+function advance(now){
+  if(!videoStarted){
+    if(clockMode||cur.stalled){ videoStarted=true; vtLast=now; }
+    else if(clip.currentTime>0.04){ videoStarted=true; vt=clip.currentTime; vtLast=now; }
+    else if(now-playAt>2500){ playFails++; if(playFails>=2) clockMode=true; cur.stalled=true; clip.classList.remove('on'); videoStarted=true; vt=0; vtLast=now; }
+    else return false;
+  }
+  const dt=Math.min(0.05,(now-vtLast)/1000); vt+=dt*vtRate; vtLast=now; syncVideo(now); return dt;
+}
+function tick(now){
+  if(state==='wait'){ if(advance(now)===false) return; if(vt>=C.biteSlow && vtRate===1) setRate(BITE_RATE); if(vt>=C.bite && !cur.cueDone){ biteCue(); state='bite'; } }
+  else if(state==='bite'){ advance(now); if(vt>=C.lateEnd) missBite('the fish spit the hook \u2014 tap the moment the rod tip dips'); }
+  else if(state==='fight'){ const dt=advance(now); if(dt===false) return; cur.fightT+=dt; stepFight(dt); }
+  else if(state==='finale'){ advance(now); if(vt>=C.splashDown && !cur.finaleSplashed){ cur.finaleSplashed=true; AudioFX.splash(1); FX.spray(FX.W*0.6,FX.H*0.55,90,1.4); } if(vt>=C.end) landIt(); }
+  else if(state==='failed'||state==='landed'){ advance(now); }
+}
+function loop(now){ requestAnimationFrame(loop); if(cur) tick(now); FX.draw(now); }
+requestAnimationFrame(loop);
+
+/* ---- input: taps set the hook, holding reels ---- */
+function press(){
+  AudioFX.resume();
+  if(state==='intro'){ clearTimers(); ui.linesOut.classList.remove('on'); readyCast(); return; }
+  if(state==='ready'){ castLine(); return; }
+  if(state==='wait'){ cur.earlyTaps++; showHint(cur.earlyTaps>1?'Patience \u2014 wait for the rod tip to dip':'Not yet \u2014 wait for the bite'); return; }
+  if(state==='bite'){ setHook(); holding=true; return; }
+  if(state==='fight'){ holding=true; return; }
+}
+function release(){ holding=false; }
+const stage=$('#stage');
+stage.addEventListener('pointerdown',e=>{ if(e.target.closest('button')) return; e.preventDefault(); press(); });
+window.addEventListener('pointerup',release); window.addEventListener('pointercancel',release); window.addEventListener('blur',release);
+let keyDown=false;
+window.addEventListener('keydown',e=>{ if(e.code!=='Space'&&e.code!=='Enter') return; if(e.target.closest('button')) return; e.preventDefault(); if(keyDown) return; keyDown=true; press(); });
+window.addEventListener('keyup',e=>{ if(e.code==='Space'||e.code==='Enter'){ keyDown=false; release(); } });
+stage.addEventListener('contextmenu',e=>e.preventDefault());
+document.addEventListener('visibilitychange',()=>{
+  if(!cur) return;
+  if(document.hidden){ holding=false; if(['wait','bite','fight','finale'].includes(state)) clip.pause(); }
+  else { vtLast=performance.now(); if(['wait','bite','fight','finale'].includes(state)){ const p=clip.play(); if(p&&p.catch) p.catch(()=>{}); } }
+});
+
+/* ---- loading: download the clip up front so the fight never buffers ---- */
+const SRC='clips/sailfish.mp4'; const btn=$('#btnStart'), loadFill=$('#loadFill');
+function enable(){ btn.disabled=false; btn.textContent='Lines in the water'; loadFill.parentElement.hidden=true; }
+function attach(url,fallback){
+  return new Promise(res=>{
+    let settled=false; const done=()=>{ if(settled) return; settled=true; clip.removeEventListener('loadedmetadata',ok); clip.removeEventListener('error',bad); res(); };
+    const ok=()=>done();
+    const bad=()=>{ if(settled) return; settled=true; clip.removeEventListener('loadedmetadata',ok); clip.removeEventListener('error',bad); if(fallback) attach(fallback,null).then(res); else res(); };
+    clip.addEventListener('loadedmetadata',ok); clip.addEventListener('error',bad);
+    clip.src=url; try{ clip.load(); }catch(e){}
+    setTimeout(done,8000);
+  });
+}
+async function loadClip(){
+  try{
+    const res=await fetch(SRC); if(!res.ok) throw new Error('HTTP '+res.status);
+    const total=+res.headers.get('content-length')||0; const reader=res.body&&res.body.getReader?res.body.getReader():null; let blob;
+    if(reader){ const chunks=[]; let got=0; for(;;){ const {done,value}=await reader.read(); if(done) break; chunks.push(value); got+=value.length; if(total) loadFill.style.width=Math.min(100,got/total*100)+'%'; } blob=new Blob(chunks,{type:'video/mp4'}); }
+    else blob=await res.blob();
+    loadFill.style.width='100%';
+    await attach(URL.createObjectURL(blob),SRC);
+  }catch(e){ await attach(SRC,null); }
+  enable();
+}
+loadClip();
+setTimeout(()=>{ if(btn.disabled) enable(); },25000);
+try{ const b=+localStorage.getItem('clutch-catch-best')||0; if(b){ const el=$('#titleBest'); el.textContent='Your best: '+b.toLocaleString()+' pts'; el.hidden=false; } }catch(e){}
+
+btn.addEventListener('click',()=>{ AudioFX.init(); AudioFX.resume(); startGame(); });
+$('#btnAgain').addEventListener('click',()=>{ AudioFX.resume(); startGame(); });
+
+const boot=()=>{}; window.claude?.hot?.ready ? window.claude.hot.ready(boot) : boot(window.claude?.hot?.data ?? {});
+})();
+</script>
+
+</body></html>
